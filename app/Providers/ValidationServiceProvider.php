@@ -1,22 +1,9 @@
 <?php
 namespace App\Providers;
 
-use Validator;
-use Illuminate\Support\ServiceProvider;
 use DB;
-use Log;
-use Illuminate\Support\Facades\Schema;
-use App\Observers\AssetObserver;
-use App\Observers\LicenseObserver;
-use App\Observers\AccessoryObserver;
-use App\Observers\ConsumableObserver;
-use App\Observers\ComponentObserver;
-use App\Models\Asset;
-use App\Models\License;
-use App\Models\Accessory;
-use App\Models\Consumable;
-use App\Models\Component;
-
+use Illuminate\Support\ServiceProvider;
+use Validator;
 
 /**
  * This service provider handles a few custom validation rules.
@@ -102,6 +89,45 @@ class ValidationServiceProvider extends ServiceProvider
             return true;
 
         });
+
+
+        Validator::extend('letters', function ($attribute, $value, $parameters) {
+            return preg_match('/\pL/', $value);
+        });
+
+        Validator::extend('numbers', function ($attribute, $value, $parameters) {
+            return preg_match('/\pN/', $value);
+        });
+
+        Validator::extend('case_diff', function ($attribute, $value, $parameters) {
+            return preg_match('/(\p{Ll}+.*\p{Lu})|(\p{Lu}+.*\p{Ll})/u', $value);
+        });
+
+        Validator::extend('symbols', function ($attribute, $value, $parameters) {
+            return preg_match('/\p{Z}|\p{S}|\p{P}/', $value);
+        });
+
+        Validator::extend('cant_manage_self', function ($attribute, $value, $parameters, $validator) {
+            // $value is the actual *value* of the thing that's being validated
+            // $attribute is the name of the field that the validation is running on - probably manager_id in our case
+            // $parameters are the optional parameters - an array for everything, split on commas. But we don't take any params here.
+            // $validator gives us proper access to the rest of the actual data
+            $data = $validator->getData();
+
+            if(array_key_exists("id", $data)) {
+                if ($value && $value == $data['id']) {
+                    // if you definitely have an ID - you're saving an existing user - and your ID matches your manager's ID - fail.
+                    return false;
+                } else {
+                    return true;
+                }
+            } else {
+                // no 'id' key to compare against (probably because this is a new user)
+                // so it automatically passes this validation
+                return true;
+            }
+        });
+
 
     }
 
